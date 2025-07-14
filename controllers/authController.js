@@ -73,13 +73,14 @@ const signUpController = [
         res.cookie("token", token, {
           httpOnly: true,
           secure: true,
-          sameSite: 'none',
+          sameSite: "none",
           maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         });
         res.json({
           status: 200,
           message: "User Signed up successfully",
           token,
+          completedOnboarding: user.completedOnboarding,
         });
       }
     );
@@ -142,7 +143,7 @@ const loginController = [
         res.cookie("token", token, {
           httpOnly: true,
           secure: true,
-          sameSite: 'none',
+          sameSite: "none",
           maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         });
         res.json({
@@ -251,7 +252,7 @@ const googleOauth = async (req, res) => {
         res.cookie("token", token, {
           httpOnly: true,
           secure: true,
-          sameSite: 'none',
+          sameSite: "none",
           maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         });
         res.json({
