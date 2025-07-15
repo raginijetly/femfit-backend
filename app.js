@@ -14,6 +14,7 @@ app.use(
     credentials: true,
   })
 );
+app.set("trust proxy", 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -22,10 +23,12 @@ app.use("/api/auth", authRouter);
 app.use("/api/users", require("./routes/usersRouter"));
 app.use("/api/test", require("./routes/testApis"));
 app.use("/api/health", (req, res) => {
-  res.json({ status: "200", data: { ping : "pong" }, message: "Server is healthy" });
+  res.json({
+    status: "200",
+    data: { ping: "pong" },
+    message: "Server is healthy",
+  });
 });
-
-
 
 app.get("/", (req, res) => {
   res.json({ message: "Hello World" });
