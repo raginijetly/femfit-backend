@@ -27,19 +27,23 @@ const signUpController = [
     }),
   ],
   asyncHandler(async (req, res) => {
+    const _name = "signUpController";
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       const formattedErrors = errors.array().map((err) => ({
         field: err.path,
         message: err.msg,
       }));
+      console.log(_name, " validation errors:", formattedErrors);
       return res.json({ status: 400, errors: formattedErrors });
     }
 
     const { fullName, email, password } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    if (await User.findOne({ email }))
+    if (await User.findOne({ email })) {
+      console.log(_name, " email already exists:", email);
+
       return res.json({
         status: 400,
         errors: [
@@ -49,7 +53,7 @@ const signUpController = [
           },
         ],
       });
-
+    }
     let nickname =
       fullName && fullName.trim() ? fullName.trim() : email.split("@")[0];
 
@@ -65,11 +69,13 @@ const signUpController = [
       process.env.SESSION_SECRET,
       { expiresIn: "1d" },
       (err, token) => {
-        if (err)
+        if (err) {
+          console.error(_name, " error signing up:", err);
           return res.json({
             status: 500,
             message: `Signed up successfully, error logging in: ${err}`,
           });
+        }
         res.cookie("token", token, {
           httpOnly: true,
           secure: true,
@@ -82,6 +88,7 @@ const signUpController = [
           token,
           completedOnboarding: user.completedOnboarding,
         });
+        console.log(_name, " user signed up successfully:", user._id);
       }
     );
   }),
@@ -99,18 +106,21 @@ const loginController = [
       .withMessage("Password must be between 6 and 50 characters"),
   ],
   asyncHandler(async (req, res) => {
+    const _name = "loginController";
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       const formattedErrors = errors.array().map((err) => ({
         field: err.path,
         message: err.msg,
       }));
+      console.log(_name, " validation errors:", formattedErrors);
       return res.json({ status: 400, errors: formattedErrors });
     }
 
     const { email, password } = req.body;
     const user = await User.findOne({ email });
-    if (!user)
+    if (!user) {
+      console.log(_name, " user not found:", email);
       return res.json({
         status: 400,
         errors: [
@@ -120,9 +130,11 @@ const loginController = [
           },
         ],
       });
+    }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch)
+    if (!passwordMatch) {
+      console.log(_name, " incorrect password for user:", email);
       return res.json({
         status: 400,
         errors: [
@@ -132,14 +144,17 @@ const loginController = [
           },
         ],
       });
+    }
 
     jwt.sign(
       { id: user._id },
       process.env.SESSION_SECRET,
       { expiresIn: "1d" },
       (err, token) => {
-        if (err)
+        if (err) {
+          console.error(_name, " error signing in:", err);
           return res.json({ status: 500, message: `Error logging in: ${err}` });
+        }
         res.cookie("token", token, {
           httpOnly: true,
           secure: true,
@@ -151,6 +166,7 @@ const loginController = [
           message: "User logged in successfully",
           token,
         });
+        console.log(_name, " user logged in successfully:", user._id);
       }
     );
   }),
@@ -177,25 +193,32 @@ const forgotController = [
     }),
   ],
   asyncHandler(async (req, res) => {
+    const _name = "forgotController";
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       const formattedErrors = errors.array().map((err) => ({
         field: err.path,
         message: err.msg,
       }));
+      console.log(_name, " validation errors:", formattedErrors);
       return res.json({ status: 400, errors: formattedErrors });
     }
 
     const { fullName, email, password } = req.body;
     const user = await User.findOne({ email });
-    if (!user) return res.json({ status: 400, message: "User does not exist" });
-
-    if (user.fullName !== fullName)
+    if (!user) {
+      console.log(_name, " user not found:", email);
+      return res.json({ status: 400, message: "User does not exist" });
+    }
+    if (user.fullName !== fullName) {
+      console.log(_name, " full name does not match for user:", email);
       return res.json({ status: 400, message: "Full name does not match" });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     user.password = hashedPassword;
     await user.save();
+    console.log(_name, " password updated for user:", email);
     return res.json({
       status: 200,
       message: "Password updated successfully",
@@ -217,6 +240,7 @@ const googleOauth = async (req, res) => {
   try {
     const { idToken } = req.body;
     if (!idToken) {
+      console.log("Google auth error: ID token is required");
       return res.json({ status: 400, message: "ID token is required" });
     }
 
@@ -229,6 +253,7 @@ const googleOauth = async (req, res) => {
     const payload = ticket.getPayload();
 
     if (!payload || !payload.sub) {
+      console.log("Google auth error: Invalid ID token");
       return res.json({ status: 400, message: "Invalid ID token" });
     }
 
@@ -247,8 +272,10 @@ const googleOauth = async (req, res) => {
       process.env.SESSION_SECRET,
       { expiresIn: "1d" },
       (err, token) => {
-        if (err)
+        if (err) {
+          console.error("Google auth error:", err);
           return res.json({ status: 500, message: `Error logging in: ${err}` });
+        }
         res.cookie("token", token, {
           httpOnly: true,
           secure: true,
@@ -260,6 +287,7 @@ const googleOauth = async (req, res) => {
           message: "User logged in successfully",
           data: { token },
         });
+        console.log("User logged in successfully via Google:", user._id);
       }
     );
   } catch (err) {
