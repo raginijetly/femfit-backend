@@ -1,11 +1,24 @@
 const User = require("../models/Users");
-const { ONBOARDING_QUESTIONS, MOODS, MOOD_HISTORY_DAYS } = require("../constants");
+const {
+  ONBOARDING_QUESTIONS,
+  MOODS,
+  MOOD_HISTORY_DAYS,
+} = require("../constants");
 
 const saveOnboardingAnswers = async (req, res) => {
   const { onboardingAnswers } = req.body;
   if (!onboardingAnswers || typeof onboardingAnswers !== "object") {
     return res.json({ status: 400, message: "Invalid onboarding answers" });
   }
+
+  const existingUser = await User.findById(req.user.id);
+  if (!existingUser)
+    return res.json({ status: 404, message: "User not found" });
+  if (existingUser.completedOnboarding)
+    return res.json({
+      status: 200,
+      message: "Onboarding already completed",
+    });
 
   const validOnboardingAnswers = {};
   ONBOARDING_QUESTIONS.forEach((q) => {
@@ -107,7 +120,7 @@ const getOnboardingQuestion = async (req, res) => {
         totalQuestions:
           ONBOARDING_QUESTIONS[ONBOARDING_QUESTIONS.length - 1].stage,
         completedOnboarding,
-        moodHistory
+        moodHistory,
       },
     });
   } catch (error) {
@@ -120,7 +133,8 @@ const updateDailyMood = async (req, res) => {
   try {
     const { mood } = req.body;
 
-    if (!MOODS.includes(mood)) return res.json({ status: 400, message: "Invalid value for mood" });
+    if (!MOODS.includes(mood))
+      return res.json({ status: 400, message: "Invalid value for mood" });
 
     const today = new Date();
     const storedMoods = await User.findOne(
@@ -128,7 +142,8 @@ const updateDailyMood = async (req, res) => {
       { dailyMood: 1, _id: 0 }
     ).lean();
 
-    if (!storedMoods) return res.json({ status: 404, message: "User not found" });
+    if (!storedMoods)
+      return res.json({ status: 404, message: "User not found" });
     if (!storedMoods.dailyMood) storedMoods.dailyMood = [];
 
     if (
@@ -136,7 +151,9 @@ const updateDailyMood = async (req, res) => {
       storedMoods.dailyMood &&
       storedMoods.dailyMood.length > 0
     ) {
-      const lastMoodDate = new Date(storedMoods.dailyMood[storedMoods.dailyMood.length - 1].date);
+      const lastMoodDate = new Date(
+        storedMoods.dailyMood[storedMoods.dailyMood.length - 1].date
+      );
       if (
         lastMoodDate.getDate() === today.getDate() &&
         lastMoodDate.getMonth() === today.getMonth() &&
@@ -154,8 +171,9 @@ const updateDailyMood = async (req, res) => {
       mood: mood.toLowerCase(),
     };
 
-    if (storedMoods.dailyMood.length === MOOD_HISTORY_DAYS) storedMoods.dailyMood.shift();
-    
+    if (storedMoods.dailyMood.length === MOOD_HISTORY_DAYS)
+      storedMoods.dailyMood.shift();
+
     storedMoods.dailyMood.push(todaysMood);
 
     await User.updateOne(
@@ -166,9 +184,8 @@ const updateDailyMood = async (req, res) => {
     return res.json({
       status: 200,
       message: "Daily mood updated successfully",
-      data: storedMoods.dailyMood
+      data: storedMoods.dailyMood,
     });
-
   } catch (error) {
     console.error("Error updating daily mood:", error);
     return res.json({ status: 500, message: "Internal server error" });
