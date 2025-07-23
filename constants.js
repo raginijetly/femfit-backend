@@ -17,6 +17,7 @@ const ONBOARDING_QUESTIONS = [
     type: "date",
     question: "When was your last period?",
     text: "This helps us personalize your fitness plan based on your cycle",
+    placeholder: `"The date can be a rough estimate, does not have to be exact. It can be updated later."`,
   },
   // Question 3
   {
