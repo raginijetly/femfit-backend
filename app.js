@@ -22,6 +22,8 @@ app.use(cookieParser());
 app.use("/api/auth", authRouter);
 app.use("/api/users", require("./routes/usersRouter"));
 app.use("/api/test", require("./routes/testApis"));
+app.use("/api/sections", require("./routes/sectionRoutes"));
+
 app.use("/api/health", (req, res) => {
   res.json({
     status: "200",
