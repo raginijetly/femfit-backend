@@ -100,8 +100,9 @@ const getOnboardingQuestion = async (req, res) => {
     let userAnswers = {};
     let completedOnboarding = false;
     let moodHistory = [];
+    let user = null;
     if (req.user && req.user.id) {
-      const user = await User.findById(req.user.id);
+      user = await User.findById(req.user.id);
       if (user && user.onboardingAnswers) {
         userAnswers = user.onboardingAnswers;
         completedOnboarding = user.completedOnboarding;
@@ -121,6 +122,7 @@ const getOnboardingQuestion = async (req, res) => {
           ONBOARDING_QUESTIONS[ONBOARDING_QUESTIONS.length - 1].stage,
         completedOnboarding,
         moodHistory,
+        user,
       },
     });
   } catch (error) {
