@@ -166,7 +166,12 @@ const loginController = [
           message: "User logged in successfully",
           token,
         });
-        console.log(_name, " user logged in successfully:", user._id);
+        console.log(
+          _name,
+          " user logged in successfully:",
+          "Full Name :" + user.fullName,
+          "Email :" + user.email
+        );
       }
     );
   }),
