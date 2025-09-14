@@ -1,4 +1,6 @@
 const crypto = require("crypto");
+const { sendMail } = require("../service/nodeMailer");
+const resetPasswordTemplate = require("../templates/resetPasswordTemplate.js");
 
 const generateUsername = ({ name, email, googleId }) => {
   const base = name?.toLowerCase()?.replace(/\s+/g, "") || email?.split("@")[0];
@@ -30,8 +32,29 @@ const generateUsername = ({ name, email, googleId }) => {
 //   return res.json({ status, data });
 // };
 
+const sendPasswordResetMail = async ({ userEmail, userName, resetUrl, expiryMinutes }) => {
+  try {
+    const html = resetPasswordTemplate
+                ?.replace(/{{userName}}/g, userName || "there")
+                ?.replace(/{{resetUrl}}/g, resetUrl)
+                ?.replace(/{{expiryMinutes}}/g, expiryMinutes || '10')
+                ?.replace(/{{currentYear}}/g, new Date().getFullYear());
+
+    await sendMail({
+      to: userEmail,
+      subject: "Reset your FemFit password",
+      html,
+    });
+  } catch (err) {
+    err.scope = err.scope || "sendPasswordResetMail";
+    console.error(err);
+    throw err;
+  }
+}
+
 module.exports = {
   generateUsername,
+  sendPasswordResetMail,
   // returnError,
   // returnResponse,
 };

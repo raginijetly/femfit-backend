@@ -3,6 +3,9 @@ const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { OAuth2Client } = require("google-auth-library");
+const crypto = require("crypto");
+const PasswordResetToken = require("../models/PasswordResetTokens"); 
+const { sendPasswordResetMail } = require("../utils");
 
 const User = require("../models/Users");
 
@@ -301,10 +304,85 @@ const googleOauth = async (req, res) => {
   }
 };
 
+const forgetPasswordController = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ status: 400, message: "Email is required" });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ status: 404, message: "User not found" });
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+    await PasswordResetToken.create({ userId: user._id, token: tokenHash });
+    const clientUrl =
+      (req.headers["x-client-url"] && String(req.headers["x-client-url"]).trim()) ||
+      (req.headers.referer && String(req.headers.referer).trim()) ||
+      process.env.CLIENT_URL ||
+      null;
+
+    const resetLink = clientUrl ? `${clientUrl.replace(/\/+$/, "")}/reset-password?token=${token}` : null;
+    await sendPasswordResetMail({ userEmail: email, userName: user.fullName, resetUrl: resetLink, expiryMinutes: 10 });
+    
+    return res.json({
+      status: 200,
+      message: "Password reset link sent",
+    });
+  } catch (err) {
+    err.scope = err.scope || "forgetPasswordController";
+    console.error("Forget password error:", err);
+    res.status(500).json({ status: 500, message: "Error processing request" });
+  }
+};
+
+const validateToken = async (req, res) => {
+  try {
+    const { token } = req.query;
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const passwordResetToken = await PasswordResetToken.findOne({ token: tokenHash });
+    if (!passwordResetToken) return res.status(400).json({ status: 400, message: "Invalid or expired token" });
+    res.status(200).json({ status: 200, message: "Token is valid" });
+  } catch (err) {
+    err.scope = "validateToken";
+    console.error("Validate token error:", err);
+    res.status(500).json({ status: 500, message: "Error processing request" });
+  }
+};
+
+const updatePassword = async (req, res) => {
+  try {
+    const { token, password, confirmPassword } = req.body;
+    if (!token || !password || !confirmPassword) return res.status(400).json({ status: 400, message: "Token, Password and Confirm Password are required" });
+    if (password != confirmPassword) return res.status(400).json({ status: 400, message: "Password and Confirm Password do not match" });
+    if (password.length < 6 || password.length > 50) return res.status(400).json({ status: 400, message: "Password must be between 6 and 50 characters" });
+
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const passwordResetToken = await PasswordResetToken.findOne({ token: tokenHash });
+    if (!passwordResetToken) return res.status(400).json({ status: 400, message: "Invalid or expired token" });
+
+    const user = await User.findById(passwordResetToken.userId);
+    if (!user) return res.status(404).json({ status: 404, message: "User not found" });
+
+    user.password = bcrypt.hashSync(password, 10);
+    await user.save();
+    await PasswordResetToken.deleteOne({ _id: passwordResetToken._id });
+
+    res.status(200).json({ status: 200, message: "Password updated successfully" });
+  } catch (err) {
+    err.scope = "updatePassword";
+    console.error("Update password error:", err);
+    res.status(500).json({ status: 500, message: "Error processing request" });
+  }
+};
+
 module.exports = {
   signUpController,
   loginController,
   logoutController,
   forgotController,
   googleOauth,
+  forgetPasswordController,
+  validateToken,
+  updatePassword
 };
