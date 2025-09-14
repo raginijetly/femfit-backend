@@ -5,6 +5,7 @@ const app = express();
 require("dotenv").config();
 const cors = require("cors");
 const authRouter = require("./routes/authRouter");
+const responseLogger = require("./middleware/responseLoggerMiddleware");
 
 databaseConnection();
 
@@ -18,6 +19,9 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// response logger: wraps res.json and logs (redacts sensitive keys). Configure via env.
+app.use(responseLogger);
 
 app.use("/api/auth", authRouter);
 app.use("/api/users", require("./routes/usersRouter"));
