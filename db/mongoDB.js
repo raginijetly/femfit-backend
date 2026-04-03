@@ -6,7 +6,7 @@ dotenv.config();
 const databaseConnectionUser = process.env.DATABASE_CONNECTION_USER;
 const databaseConnectionPassword = process.env.DATABASE_CONNECTION_PASSWORD;
 
-const URL = `mongodb+srv://${databaseConnectionUser}:${databaseConnectionPassword}@cluster0.ij9wjbb.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+const URL = `mongodb+srv://${databaseConnectionUser}:${databaseConnectionPassword}@cluster0.ij9wjbb.mongodb.net/raginijetly_db?retryWrites=true&w=majority`;
 
 const databaseConnection = async () => {
   try {
